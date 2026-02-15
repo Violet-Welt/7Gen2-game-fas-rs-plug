@@ -1,7 +1,7 @@
 name: 自动打包Magisk模块
-on:
+于:
   push:
-    tags:
+    标签:
       - 'v*' # 推送v开头的标签就自动打包（比如v1.0、v1.1）
   workflow_dispatch: # 支持网页手动点一下就打包
 jobs:
@@ -20,7 +20,7 @@ jobs:
             VERSION="test-$(date +%Y%m%d)"
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "ZIP_NAME=7+gen2-offset-fas-rs-extension-$VERSION.zip" >> $GITHUB_OUTPUT
+          echo "ZIP_NAME=7gen2-fas-rs-plug-$VERSION.zip" >> $GITHUB_OUTPUT
 
       - name: 打包成Magisk可刷入的ZIP
         run: |
@@ -38,7 +38,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.get_version.outputs.ZIP_NAME }}
+          文件: ${{ steps.get_version.outputs.ZIP_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
