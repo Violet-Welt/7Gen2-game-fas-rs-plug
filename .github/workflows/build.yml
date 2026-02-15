@@ -1,88 +1,111 @@
-name: 自动打包并发布Magisk模块
+name: 自动打包Magisk模块
 on:
   push:
     tags:
-      - 'v*' # 推送v开头的标签时自动打包并发布 (例如: v1.0, v1.1)
-  workflow_dispatch: # 支持在GitHub网页上手动触发打包
-
+      - 'v*' # 推送v开头的标签自动打包+发布（v1.0、v1.1）
+  workflow_dispatch: # 支持网页手动一键触发打包（测试用）
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 拉取仓库代码
+      - name: 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 2. 生成版本信息
-        id: get_version
+      - name: 生成版本号与ZIP名称
+        id: get_info
         run: |
-          # 从Git标签中提取版本号，如 v1.0 -> 1.0
+          # 提取版本号，和你截图的命名格式完全匹配
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            MODULE_VERSION=${GITHUB_REF#refs/tags/v}
+            VERSION=${GITHUB_REF#refs/tags/v}
+            ZIP_NAME="7gen2-fas-rs-plug-v${VERSION}.zip"
           else
-            MODULE_VERSION="测试版-$(date +%Y%m%d%H%M%S)"
+            VERSION="test-$(date +%Y%m%d)"
+            ZIP_NAME="7gen2-fas-rs-plug-${VERSION}.zip"
           fi
-          # 定义最终的ZIP包名称
-          MODULE_ZIP_NAME="7gen2-fas-rs-plug-${MODULE_VERSION}.zip"
-          
-          echo "MODULE_VERSION=${MODULE_VERSION}" >> $GITHUB_OUTPUT
-          echo "MODULE_ZIP_NAME=${MODULE_ZIP_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_OUTPUT
 
-      - name: 3. 🔍 校验核心文件 (关键步骤)
+      - name: 🔍 前置校验：核对所有必须文件
         run: |
-          echo "===== 检查当前目录结构 ====="
+          echo "===== 当前仓库根目录文件列表 ====="
           ls -la
-          echo "=============================="
+          echo "===== module文件夹内的文件列表 ====="
+          ls -la module/
+          echo "==================================="
           
-          # 检查module.prop是否存在于根目录
-          if [ ! -f "module.prop" ]; then
-            echo "❌ 错误：根目录未找到 module.prop 文件！"
-            exit 1
-          fi
-          
-          # 检查META-INF目录是否存在于根目录
-          if [ ! -d "META-INF" ]; then
-            echo "❌ 错误：根目录未找到 META-INF 文件夹！"
-            exit 1
-          fi
-          
-          echo "✅ 核心文件校验通过！"
+          # 检查仓库根目录的必须文件
+          REQUIRED_ROOT=("module" "module.prop" "main.lua")
+          for ITEM in "${REQUIRED_ROOT[@]}"; do
+            if [ ! -e "$ITEM" ]; then
+              echo "❌ 错误：仓库根目录缺少必须文件/文件夹 -> $ITEM"
+              exit 1
+            fi
+          done
 
-      - name: 4. 📦 执行打包 (修复版)
+          # 检查module文件夹内的必须文件
+          REQUIRED_MODULE=("META-INF" "customize.sh" "service.sh")
+          for ITEM in "${REQUIRED_MODULE[@]}"; do
+            if [ ! -e "module/$ITEM" ]; then
+              echo "❌ 错误：module文件夹内缺少必须文件/文件夹 -> $ITEM"
+              exit 1
+            fi
+          done
+          echo "✅ 所有核心文件校验通过，目录结构正确"
+
+      - name: 📦 准备打包目录（合并文件，确保结构正确）
         run: |
-          # 核心命令：打包当前目录所有内容，排除Git和工作流文件
-          zip -r "${{ steps.get_version.outputs.MODULE_ZIP_NAME }}" . \
-            -x ".git/*" ".github/*" "README.md" "LICENSE" "*.md"
+          # 创建临时打包目录，所有要打包的文件都放这里，最终ZIP根目录就是这里的内容
+          mkdir -p pack_temp
           
-          echo "✅ 打包完成，文件名为：${{ steps.get_version.outputs.MODULE_ZIP_NAME }}"
+          # 第一步：把module文件夹里的所有内容，复制到打包目录根目录
+          cp -r module/* pack_temp/
+          
+          # 第二步：把仓库根目录的核心文件，复制到打包目录根目录
+          # 如果你有其他根目录文件要打包，在这里加一行即可，格式：cp 文件名 pack_temp/
+          cp module.prop pack_temp/
+          cp main.lua pack_temp/
+          # 比如你要打包update.json，就把下面这行的#去掉
+          # cp update.json pack_temp/
 
-      - name: 5. 🔍 验证打包结果
+          echo "===== 最终打包目录的文件列表（和你截图的ZIP结构完全一致） ====="
+          ls -la pack_temp/
+          echo "=================================================================="
+
+      - name: 📦 执行打包（和你手动打包的结构完全一致）
         run: |
-          echo "===== 生成的ZIP包内容预览 ====="
-          unzip -l "${{ steps.get_version.outputs.MODULE_ZIP_NAME }}" | head -20
-          echo "================================"
-          
-          # 检查ZIP包内是否包含关键文件
-          if unzip -l "${{ steps.get_version.outputs.MODULE_ZIP_NAME }}" | grep -q "module.prop"; then
-            echo "✅ 验证通过：ZIP包内包含 module.prop"
-          else
-            echo "❌ 错误：ZIP包内未找到 module.prop！"
-            exit 1
-          fi
+          # 进入打包目录，打包所有内容，确保ZIP根目录就是这些文件，没有多余文件夹
+          cd pack_temp
+          zip -r "../${{ steps.get_info.outputs.ZIP_NAME }}" ./*
+          cd ..
+          echo "✅ 打包完成，文件名：${{ steps.get_info.outputs.ZIP_NAME }}"
 
-      - name: 6. 📤 上传打包产物 (供手动下载)
+      - name: 🔍 打包结果最终校验
+        run: |
+          echo "===== 打包后ZIP内的完整文件列表 ====="
+          unzip -l "${{ steps.get_info.outputs.ZIP_NAME }}"
+          echo "======================================="
+          
+          # 二次校验ZIP内的所有核心文件，确保都在根目录
+          ZIP_FILE="${{ steps.get_info.outputs.ZIP_NAME }}"
+          REQUIRED_IN_ZIP=("META-INF" "module.prop" "customize.sh" "main.lua" "service.sh")
+          for ITEM in "${REQUIRED_IN_ZIP[@]}"; do
+            if ! unzip -l "$ZIP_FILE" | grep -q "$ITEM"; then
+              echo "❌ 错误：ZIP内缺少文件 -> $ITEM"
+              exit 1
+            fi
+          done
+          echo "✅ 校验通过！ZIP内结构和你截图的正常模块完全一致，可直接刷入"
+
+      - name: 上传打包成品（可直接下载测试）
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.get_version.outputs.MODULE_ZIP_NAME }}
-          path: ${{ steps.get_version.outputs.MODULE_ZIP_NAME }}
+          name: ${{ steps.get_info.outputs.ZIP_NAME }}
+          path: ${{ steps.get_info.outputs.ZIP_NAME }}
 
-      - name: 7. 🚀 自动发布到GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') # 仅在推送标签时执行
+      - name: 自动发布到Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          files: ${{ steps.get_version.outputs.MODULE_ZIP_NAME }}
-          draft: false
-          prerelease: false
+          files: ${{ steps.get_info.outputs.ZIP_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
