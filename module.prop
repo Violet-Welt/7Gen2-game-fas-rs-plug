@@ -1,0 +1,7 @@
+id=SM7475_fas_rs_plug
+name=7gen-far-rs-plug
+version=v1.0
+versionCode=14
+author=Violet-Welt
+description=fas-rs cpu freq offset for 7+gen2
+updateJson=https://raw.githubusercontent.com/Violet-Welt/7Gen2-game-fas-rs-plug/main/update.json
