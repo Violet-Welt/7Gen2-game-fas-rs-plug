@@ -1,43 +1,88 @@
-name: 自动打包Magisk模块
+name: 自动打包并发布Magisk模块
 on:
   push:
     tags:
-      - 'v*' # 推送v开头的标签就自动打包（比如v1.0、v1.1）
-  workflow_dispatch: # 支持网页手动点一下就打包
+      - 'v*' # 推送v开头的标签时自动打包并发布 (例如: v1.0, v1.1)
+  workflow_dispatch: # 支持在GitHub网页上手动触发打包
+
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取你的模块代码
+      - name: 1. 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 生成模块版本号
+      - name: 2. 生成版本信息
         id: get_version
         run: |
+          # 从Git标签中提取版本号，如 v1.0 -> 1.0
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
+            MODULE_VERSION=${GITHUB_REF#refs/tags/v}
           else
-            VERSION="test-$(date +%Y%m%d)"
+            MODULE_VERSION="测试版-$(date +%Y%m%d%H%M%S)"
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "ZIP_NAME=7gen2-fas-rs-plug-$VERSION.zip" >> $GITHUB_OUTPUT
+          # 定义最终的ZIP包名称
+          MODULE_ZIP_NAME="7gen2-fas-rs-plug-${MODULE_VERSION}.zip"
+          
+          echo "MODULE_VERSION=${MODULE_VERSION}" >> $GITHUB_OUTPUT
+          echo "MODULE_ZIP_NAME=${MODULE_ZIP_NAME}" >> $GITHUB_OUTPUT
 
-      - name: 打包成Magisk可刷入的ZIP
+      - name: 3. 🔍 校验核心文件 (关键步骤)
         run: |
-          # 打包根目录所有文件，排除无关内容，保证Magisk能识别
-          zip -r "${{ steps.get_version.outputs.ZIP_NAME }}" ./* \
-            -x ".git*" ".github*" "README.md" "LICENSE"
+          echo "===== 检查当前目录结构 ====="
+          ls -la
+          echo "=============================="
+          
+          # 检查module.prop是否存在于根目录
+          if [ ! -f "module.prop" ]; then
+            echo "❌ 错误：根目录未找到 module.prop 文件！"
+            exit 1
+          fi
+          
+          # 检查META-INF目录是否存在于根目录
+          if [ ! -d "META-INF" ]; then
+            echo "❌ 错误：根目录未找到 META-INF 文件夹！"
+            exit 1
+          fi
+          
+          echo "✅ 核心文件校验通过！"
 
-      - name: 上传打包好的文件（可直接下载）
+      - name: 4. 📦 执行打包 (修复版)
+        run: |
+          # 核心命令：打包当前目录所有内容，排除Git和工作流文件
+          zip -r "${{ steps.get_version.outputs.MODULE_ZIP_NAME }}" . \
+            -x ".git/*" ".github/*" "README.md" "LICENSE" "*.md"
+          
+          echo "✅ 打包完成，文件名为：${{ steps.get_version.outputs.MODULE_ZIP_NAME }}"
+
+      - name: 5. 🔍 验证打包结果
+        run: |
+          echo "===== 生成的ZIP包内容预览 ====="
+          unzip -l "${{ steps.get_version.outputs.MODULE_ZIP_NAME }}" | head -20
+          echo "================================"
+          
+          # 检查ZIP包内是否包含关键文件
+          if unzip -l "${{ steps.get_version.outputs.MODULE_ZIP_NAME }}" | grep -q "module.prop"; then
+            echo "✅ 验证通过：ZIP包内包含 module.prop"
+          else
+            echo "❌ 错误：ZIP包内未找到 module.prop！"
+            exit 1
+          fi
+
+      - name: 6. 📤 上传打包产物 (供手动下载)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.get_version.outputs.ZIP_NAME }}
-          path: ${{ steps.get_version.outputs.ZIP_NAME }}
+          name: ${{ steps.get_version.outputs.MODULE_ZIP_NAME }}
+          path: ${{ steps.get_version.outputs.MODULE_ZIP_NAME }}
 
-      - name: 自动发布到Release（和你截图里的效果一模一样）
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: 7. 🚀 自动发布到GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') # 仅在推送标签时执行
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.get_version.outputs.ZIP_NAME }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: ${{ steps.get_version.outputs.MODULE_ZIP_NAME }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
