@@ -77,6 +77,14 @@ function load_fas(pid, pkg)
     then
         set_extra_policy_rel(0, 4, -300000,-100000)
 	set_extra_policy_rel(4, 7, -300000, -150000)	
+	elseif (pkg == "com.tencent.tmgp.codev")
+    then
+        set_extra_policy_rel(0, 4, -150000, 0)
+    elseif (pkg == "com.tencent.tmgp.codev")
+    then
+        set_extra_policy_rel(0, 4, -150000, 0)
+        set_extra_policy_rel(4, 7, -100000, 0)
+        set_extra_policy_abs(7, 2200000, 2400000)    
     end
 end
 
