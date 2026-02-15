@@ -75,16 +75,23 @@ function load_fas(pid, pkg)
 	set_extra_policy_rel(4, 7, -200000, -100000)
 	elseif (pkg == "com.mobile.legends")
     then
-        set_extra_policy_rel(0, 4, -300000,-100000)
+        set_extra_policy_rel(0, 4, -300000, -100000)
 	set_extra_policy_rel(4, 7, -300000, -150000)	
 	elseif (pkg == "com.tencent.tmgp.codev")
     then
         set_extra_policy_rel(0, 4, -150000, 0)
-    elseif (pkg == "com.tencent.tmgp.codev")
-    then
-        set_extra_policy_rel(0, 4, -150000, 0)
         set_extra_policy_rel(4, 7, -100000, 0)
-        set_extra_policy_abs(7, 2200000, 2400000)    
+        set_extra_policy_abs(7, 2200000, 2400000)
+    elseif (pkg == "com.kurogame.haru.hero")
+    then
+      set_extra_policy_rel(0, 4, -350000, -150000)
+      set_extra_policy_rel(4, 7, -250000, -150000)
+      set_extra_policy_abs(7, 2000000, 2400000)
+    elseif (pkg == "com.hypergryph.endfield")
+    then
+    set_extra_policy_rel(0, 4, -300000, -100000)
+    set_extra_policy_rel(4, 7, -250000, -150000)
+    set_extra_policy_abs(7, 2300000, 2800000)
     end
 end
 

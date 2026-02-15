@@ -22,3 +22,4 @@
 - QQ飞车
 - Mobile Legends: Bang Bang
 - 无畏契约
+- 明日方舟：终末地

@@ -1,5 +1,6 @@
 #  **7Gen2-game-fas-rs-plug**
 fork自7gen2-offset-fas-rs-extension
+
 ## **适配游戏**
 - 王者荣耀
 - 和平精英
@@ -24,3 +25,5 @@ fork自7gen2-offset-fas-rs-extension
 - QQ飞车
 - Mobile Legends: Bang Bang
 - 无畏契约
+- 战双帕弥什
+- 明日方舟:终末地
