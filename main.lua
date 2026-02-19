@@ -92,6 +92,11 @@ function load_fas(pid, pkg)
     set_extra_policy_rel(0, 4, -300000, -100000)
     set_extra_policy_rel(4, 7, -250000, -150000)
     set_extra_policy_abs(7, 2300000, 2800000)
+    elseif (pkg == "com.idreamsky.klbqm" or pkg == "com.idreamsky.klbqm.bilibili")
+    then
+      set_extra_policy_abs(0, 800000, 1200000)
+      set_extra_policy_abs(4, 1800000, 2400000)
+      set_extra_policy_abs(7, 2000000, 2700000) 
     end
 end
 
