@@ -27,3 +27,4 @@ fork自7gen2-offset-fas-rs-extension
 - 无畏契约
 - 战双帕弥什
 - 明日方舟:终末地
+- 卡拉比丘
